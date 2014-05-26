@@ -10,6 +10,7 @@ RSpec.configure do |config|
   config.filter_run :focus
 
   require 'active_merchant'
+  require 'faker'
   require 'active_merchant_wirecard_sepa'
 
   # Run specs in random order to surface order dependencies. If you find an

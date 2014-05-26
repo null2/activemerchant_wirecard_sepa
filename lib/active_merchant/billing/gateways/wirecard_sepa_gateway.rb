@@ -31,11 +31,19 @@ module ActiveMerchant
         commit request
       end
 
-      # cancel transaction
-      def void
+      # cancel debit transaction
+      def void_debit
         prepare_options_hash(options)
         @options[:sepa_account] = account
-        request = build_request :void, money, options
+        request = build_request :void_debit, money, options
+        commit request
+      end
+
+      # cancel credit transaction
+      def void_credit
+        prepare_options_hash(options)
+        @options[:sepa_account] = account
+        request = build_request :void_credit, money, options
         commit request
       end
 
@@ -66,7 +74,8 @@ module ActiveMerchant
       # adds transaction information to the XML-objec  
       # Builder::XmlMarkup, Symbol, Money, {} -> Builder::XmlMarkup
       #
-      # ASSUMES: options contains information about creditor-id and signed-date
+      # ASSUMES: options contains information about creditor-id and signed-date,
+      #          parent-transaction-id
       def add_transaction_data(xml, action, money, options={})
         case action
         when :debit
@@ -84,15 +93,31 @@ module ActiveMerchant
           add_requested_amount xml, money, options[:currency]
    
           add_account_details xml, options[:sepa_account]
-   
+
           add_payment_method xml, "sepacredit"
           add_mandate xml, options[:sepa_account]
           
-        when :void
-          ;
+        when :void_debit
+          add_transaction_type xml, 'void-pending-debit'
+          add_requested_amount xml, money, options[:currency]
+
+          add_parent_transaction_id xml, '3f8e01bc-9203-11e2-abbd-005056a96a54'
+        
+        when :void_credit
+          add_transaction_type xml, 'void-pending-credit'
+          add_requested_amount xml, money, options[:currency]
+
+          add_parent_transaction_id xml, '3f8e01bc-9203-11e2-abbd-005056a96a54'
+        
         when :authorize
-          ;
+          add_transaction_type xml, 'authorization'
+          add_requested_amount xml, money, options[:currency]
+          add_account_details xml, options[:sepa_account]
         end
+      end
+
+      def add_parent_transaction_id xml, id
+        xml.tag! :'parent-transaction-id', id
       end
 
       def add_requested_amount xml, money, currency

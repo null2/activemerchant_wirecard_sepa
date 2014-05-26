@@ -11,12 +11,7 @@ GIT
 GEM
   remote: https://rubygems.org/
   specs:
-    activesupport (4.1.1)
-      i18n (~> 0.6, >= 0.6.9)
-      json (~> 1.7, >= 1.7.7)
-      minitest (~> 5.1)
-      thread_safe (~> 0.1)
-      tzinfo (~> 1.1)
+    activesupport (3.0.20)
     braintree (2.30.2)
       builder (>= 2.0.0)
     builder (3.2.2)
@@ -24,8 +19,6 @@ GEM
     faker (1.3.0)
       i18n (~> 0.5)
     i18n (0.6.9)
-    json (1.8.1)
-    minitest (5.3.4)
     rspec (2.14.1)
       rspec-core (~> 2.14.0)
       rspec-expectations (~> 2.14.0)
@@ -34,14 +27,12 @@ GEM
     rspec-expectations (2.14.5)
       diff-lcs (>= 1.1.3, < 2.0)
     rspec-mocks (2.14.6)
-    thread_safe (0.3.3)
-    tzinfo (1.1.0)
-      thread_safe (~> 0.1)
 
 PLATFORMS
   ruby
 
 DEPENDENCIES
   activemerchant (= 1.9.3.patched)!
+  activesupport (= 3.0.20)
   faker
   rspec

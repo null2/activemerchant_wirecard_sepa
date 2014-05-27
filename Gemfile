@@ -5,6 +5,7 @@ source "https://rubygems.org"
 group :test, :development do
   gem 'rspec'
   gem 'faker'
+  gem 'nokogiri'
 end
 
 gem 'activemerchant', '=1.9.3.patched', :require => 'active_merchant', :git => "git://github.com/argl/active_merchant.git", :branch => "cacert_update"

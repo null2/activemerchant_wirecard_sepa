@@ -1,24 +1,20 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <!ELEMENT payment (merchant-account-id, request-id, transaction-type, 
                    requested-amount, account-holder, payment-methods,
-                   bank-account, mandate, creditor-id) >
+                   bank-account) >
 <!ATTLIST payment xmlns CDATA #FIXED "http://www.elastic-payments.com/schema/payment">
 
 <!ELEMENT merchant-account-id (#PCDATA)>
 <!ELEMENT request-id (#PCDATA)>
 <!ELEMENT transaction-type (#PCDATA)>
 <!ELEMENT requested-amount (#PCDATA)>
-<!ATTLIST requested-amount currency CDATA #REQUIRED>
+<!ATTLIST requested-amount currency CDATA #FIXED "EUR">
 <!ELEMENT account-holder (first-name, last-name)>
 <!ELEMENT first-name (#PCDATA)>
 <!ELEMENT last-name (#PCDATA)> 
 <!ELEMENT payment-methods (payment-method)>
 <!ELEMENT payment-method EMPTY>
-<!ATTLIST payment-method name CDATA #REQUIRED>
+<!ATTLIST payment-method name CDATA #FIXED "sepacredit">
 <!ELEMENT bank-account (iban, bic)>
 <!ELEMENT iban (#PCDATA)>
 <!ELEMENT bic (#PCDATA)>
-<!ELEMENT mandate (mandate-id, signed-date)>
-<!ELEMENT mandate-id (#PCDATA)>
-<!ELEMENT signed-date (#PCDATA)>
-<!ELEMENT creditor-id (#PCDATA)>

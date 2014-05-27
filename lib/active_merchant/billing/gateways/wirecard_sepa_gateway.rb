@@ -32,7 +32,7 @@ module ActiveMerchant
       end
 
       # cancel debit transaction
-      def void_debit
+      def void_debit(money, account, options = {})
         prepare_options_hash(options)
         @options[:sepa_account] = account
         request = build_request :void_debit, money, options
@@ -40,7 +40,7 @@ module ActiveMerchant
       end
 
       # cancel credit transaction
-      def void_credit
+      def void_credit(money, account, options = {})
         prepare_options_hash(options)
         @options[:sepa_account] = account
         request = build_request :void_credit, money, options
@@ -48,7 +48,7 @@ module ActiveMerchant
       end
 
       # send transaction to wirecard for further reference only
-      def authorize
+      def authorize(money, account, options = {})
         prepare_options_hash(options)
         @options[:sepa_account] = account
         request = build_request :authorize, money, options
@@ -71,7 +71,7 @@ module ActiveMerchant
         xml.target!
       end
 
-      
+      # append information to the xml using function calls
       def apply_properties xml, props={}
         props.inject(xml) do |memo, item|
           self.send("add_%s" % item.first, memo, item.last)  
@@ -85,34 +85,48 @@ module ActiveMerchant
       # ASSUMES: options contains information about creditor-id and signed-date,
       #          parent-transaction-id
       def add_transaction_data(xml, action, money, options={})
-        add_requested_amount xml, money, options[:currency]
+        # add_requested_amount xml, money, options[:currency]
 
         case action
         when :debit
           apply_properties xml, :transaction_type => 'pending-debit',
-            :account_details => options[:sepa_account],
-            :payment_method => "sepadirectdebit",
+            :requested_amount => money,
+            :account_holder => options[:sepa_account],
+            :payment_method => "sepadirectdebit", 
+            :bank_account => options[:sepa_account],
             :mandate => options[:sepa_account],
             :creditor_id => "ASD232XSFGNW"
 
         when :credit
           apply_properties xml, :transaction_type => 'pending-credit',
-            :account_details => options[:sepa_account],
+            :account_holder => options[:sepa_account],
             :payment_method => "sepacredit",
-            :mandate => options[:sepa_account]
+            :bank_account => options[:sepa_account]
 
         when :void_debit
-          apply_properties xml, :transaction_type => 'void-pending-debit',
-            :parent_transaction_id  => '3f8e01bc-9203-11e2-abbd-005056a96a54'
+          apply_properties xml, :transaction_type => 'void-debit',
+            :requested_amount => money,
+            :parent_transaction_id  => '3f8e01bc-9203-11e2-abbd-005056a96a54',
+            :payment_method => "sepadirectdebit"
         
         when :void_credit
-          apply_properties xml, :transaction_type => 'void-pending-credit',
-            :parent_transaction_id  => '3f8e01bc-9203-11e2-abbd-005056a96a54'
+          apply_properties xml, :transaction_type => 'pending-void-credit',
+            :requested_amount => money,
+            :parent_transaction_id  => '3f8e01bc-9203-11e2-abbd-005056a96a54',
+            :payment_method => 'sepacredit'
 
         when :authorize
            apply_properties xml, :transaction_type => 'authorization',
-            :account_details => options[:sepa_account]
+             :requested_amount => money,
+             :account_holder => options[:sepa_account],
+             :payment_method => 'sepadirectdebit',
+             :bank_account => options[:sepa_account]
         end
+      end
+
+
+      def add_parent_transaction_id xml, id
+        xml.tag! :'parent-transaction-id', id
       end
 
       def add_creditor_id xml, id
@@ -123,8 +137,8 @@ module ActiveMerchant
         xml.tag! :'parent-transaction-id', id
       end
 
-      def add_requested_amount xml, money, currency
-        xml.tag! :'requested-amount', { :currency => currency }, money
+      def add_requested_amount xml, money
+        xml.tag! :'requested-amount', { :currency => "EUR" }, money
       end
 
       def add_transaction_type xml, type
@@ -144,12 +158,14 @@ module ActiveMerchant
           end
       end
 
-      def add_account_details xml, account
+      def add_account_holder xml, account
         xml.tag! :'account-holder' do
           xml.tag! :'first-name', account.first_name
           xml.tag! :'last-name', account.last_name
         end
+      end
 
+      def add_bank_account xml, account
         xml.tag! :'bank-account' do
           xml.tag! :iban, account.iban
           xml.tag! :bic, account.bic

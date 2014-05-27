@@ -9,7 +9,10 @@ RSpec.configure do |config|
   config.run_all_when_everything_filtered = true
   config.filter_run :focus
 
+  PROJECT_ROOT = File.dirname(__FILE__) + "/.."
+
   require 'active_merchant'
+  require 'nokogiri'
   require 'faker'
   require 'active_merchant_wirecard_sepa'
 

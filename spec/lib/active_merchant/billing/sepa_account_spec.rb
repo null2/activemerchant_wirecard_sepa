@@ -1,7 +1,5 @@
 require 'spec_helper'
 
-
-
 describe ActiveMerchant::Billing::SepaAccount do
 
   before :each do

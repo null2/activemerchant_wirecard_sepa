@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!ELEMENT payment (payment-methods, merchant-account-id, request-id,
+                   transaction-type, parent-transaction-id, requested-amount) >
+<!ATTLIST payment xmlns CDATA #FIXED "http://www.elastic-payments.com/schema/payment">
+
+<!ELEMENT payment-methods (payment-method)>
+<!ELEMENT payment-method EMPTY>
+<!ATTLIST payment-method name CDATA #FIXED "sepacredit">
+<!ELEMENT merchant-account-id (#PCDATA)>
+<!ELEMENT request-id (#PCDATA)>
+<!ELEMENT transaction-type (#PCDATA)>
+<!ELEMENT parent-transaction-id (#PCDATA)>
+<!ELEMENT requested-amount (#PCDATA)>
+<!ATTLIST requested-amount currency CDATA #FIXED "EUR">

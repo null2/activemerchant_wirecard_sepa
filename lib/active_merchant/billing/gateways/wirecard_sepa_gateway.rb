@@ -4,7 +4,7 @@ module ActiveMerchant
       require 'digest/sha1'
 
       # Test server location
-      TEST_URL = 'https://c3-test.wirecard.com/secure/ssl-gateway'
+      TEST_URL = 'https://api-test.wirecard.com/engine/rest/paymentmethods/'
      
       # Live server location
       LIVE_URL = 'https://c3.wirecard.com/secure/ssl-gateway'
@@ -153,8 +153,8 @@ module ActiveMerchant
 
       def add_mandate xml, account
           xml.tag! :mandate do
-            xml.tag! :'mandate-id', Digest::SHA1.hexdigest(account.to_s)
-            xml.tag! :'signed-date', Date.today
+            xml.tag! :'mandate-id', 12345678 #Digest::SHA1.hexdigest(account.to_s)
+            xml.tag! :'signed-date', Date.new(2013,9,24)
           end
       end
 
@@ -172,8 +172,25 @@ module ActiveMerchant
         end
       end
 
-      def parse_response
+      # Read XML message from the gateway if successful and extract required return values
+      # String -> Hash of (Symbol => String)
+      def parse(xml)
+        response = {}
 
+        xml = REXML::Document.new(xml)
+
+        # every Wirecard-Response, success or failure, must have a status tag
+        status = REXML::XPath.first(xml, "//status")
+        if status
+          # every status tag has three attributes 
+          response[:Code] = status.attributes["code"]
+          response[:Description] = status.attributes["description"]
+          response[:Severity] = status.attributes["severity"]
+        else
+          response[:Message] = "No valid XML response message received. \nPropably wrong credentials supplied with HTTP header."
+        end
+
+        response
       end
 
       def encoded_credentials
@@ -182,16 +199,21 @@ module ActiveMerchant
         "Basic " << Base64.encode64(credentials).strip
       end
 
+      # Contact WireCard, make the XML request, and parse the
+      # reply into a Response object
       def commit(request)
         headers = { 'Content-Type' => 'text/xml',
                     'Authorization' => encoded_credentials }
 
         response = parse(ssl_post(TEST_URL, request, headers))
-        # Pending Status also means Acknowledged (as stated in their specification)
         
-        puts response.inspect
-        response   
+        response
+        
       end
     end
   end
 end
+
+
+
+

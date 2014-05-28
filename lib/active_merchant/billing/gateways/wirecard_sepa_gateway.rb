@@ -56,7 +56,7 @@ module ActiveMerchant
       end
 
       # Generates the complete xml-message that gets sent to the gateway
-      # ... -> XML-String
+      # Symbol, Integer, {} -> XML-String
       def build_request(action, money, options = {})
         xml = Builder::XmlMarkup.new :indent => 2
         xml.instruct! :xml, :encoding => "UTF-8", :standalone => "yes"
@@ -99,6 +99,7 @@ module ActiveMerchant
 
         when :credit
           apply_properties xml, :transaction_type => 'pending-credit',
+            :requested_amount => money,
             :account_holder => options[:sepa_account],
             :payment_method => "sepacredit",
             :bank_account => options[:sepa_account]
@@ -110,7 +111,7 @@ module ActiveMerchant
             :payment_method => "sepadirectdebit"
         
         when :void_credit
-          apply_properties xml, :transaction_type => 'pending-void-credit',
+          apply_properties xml, :transaction_type => 'void-credit',
             :requested_amount => money,
             :parent_transaction_id  => '3f8e01bc-9203-11e2-abbd-005056a96a54',
             :payment_method => 'sepacredit'
@@ -124,7 +125,7 @@ module ActiveMerchant
         end
       end
 
-
+      # helper methods for XML-generation
       def add_parent_transaction_id xml, id
         xml.tag! :'parent-transaction-id', id
       end
@@ -149,7 +150,7 @@ module ActiveMerchant
         xml.tag! :'payment-methods' do
           xml.tag! :'payment-method', :name => method
         end
-     end
+      end
 
       def add_mandate xml, account
           xml.tag! :mandate do
@@ -177,16 +178,22 @@ module ActiveMerchant
       def parse(xml)
         response = {}
 
-        xml = REXML::Document.new(xml)
+        xml = REXML::Document.new xml 
 
-        # every Wirecard-Response, success or failure, must have a status tag
+        # every Wirecard-Response, success or failure, must have a status and transaction-state
         status = REXML::XPath.first(xml, "//status")
-        if status
-          # every status tag has three attributes 
+        transaction_state = REXML::XPath.first(xml, "//transaction-state")
+        
+        if status and transaction_state and transaction_state.text
+
+          # either extract response values...
+          response[:TransactionState] = transaction_state.text
           response[:Code] = status.attributes["code"]
           response[:Description] = status.attributes["description"]
           response[:Severity] = status.attributes["severity"]
+
         else
+          # ...or add general failure message
           response[:Message] = "No valid XML response message received. \nPropably wrong credentials supplied with HTTP header."
         end
 
@@ -199,13 +206,15 @@ module ActiveMerchant
         "Basic " << Base64.encode64(credentials).strip
       end
 
-      # Contact WireCard, make the XML request, and parse the
-      # reply into a Response object
+      # Contact WireCard, make the XML request 
       def commit(request)
         headers = { 'Content-Type' => 'text/xml',
                     'Authorization' => encoded_credentials }
 
         response = parse(ssl_post(TEST_URL, request, headers))
+        
+        # TODO ?: parse the reply into a Response object
+        success = response[:TransactionState] == 'success'
         
         response
         

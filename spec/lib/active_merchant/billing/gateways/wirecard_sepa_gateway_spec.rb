@@ -1,4 +1,5 @@
 require 'spec_helper'
+require 'rexml/document'
 
 describe ActiveMerchant::Billing::WirecardSepaGateway do
   describe "XML validation" do
@@ -8,8 +9,8 @@ describe ActiveMerchant::Billing::WirecardSepaGateway do
       @gateway = ActiveMerchant::Billing::WirecardSepaGateway.new
 
       @account = ActiveMerchant::Billing::SepaAccount.new
-      @account.first_name = "hasf"
-      @account.last_name = "slkdjfdsk"
+      @account.first_name = "Vorname"
+      @account.last_name = "Nachname"
       @account.iban = "GR1601101250000000012300695"
       @account.bic = "PBNKDEFF"
 
@@ -66,37 +67,185 @@ describe ActiveMerchant::Billing::WirecardSepaGateway do
       @options = { :sepa_account => @account }
     end
 
-    it "parser should detect xml that is no wirecard-reply, i.e. has no statuses-field" do
-      no_reply_xml = '<payment><no-statuses>Sorry, I am not a wirecard reply!</no-statuses></payment>'
+    # parser test 1
+    it "(parser) should detect xml that has no status-field, i.e. is no valid wirecard-reply" do
+      no_reply_xml = '<payment>
+                        <transaction-state>success</transaction-state>
+                      </payment>'
 
       parsed_response = @gateway.parse(no_reply_xml)
       parsed_response[:Message].should match "No valid XML response message received. \nPropably wrong credentials supplied with HTTP header."
     end
 
-    it "should receive the success-response for correct debit request" do
+    # parser test2
+    it "(parser) should detect xml that has no transaction-state, i.e. is no valid wirecard-reply" do
+      no_reply_xml = '<payment>
+                        <statuses>
+                          <status code="201.0000" description="The resource was successfully created." severity="information"/>
+                        </statuses>
+                      </payment>'
 
-      # send request
+      parsed_response = @gateway.parse(no_reply_xml)
+      parsed_response[:Message].should match "No valid XML response message received. \nPropably wrong credentials supplied with HTTP header."
+    end
+
+    # debit (success)
+    it "should receive the success-response for a correct debit request" do
+
+      # send request and catch response
       request = @gateway.build_request :debit, 100.0, @options
       response = @gateway.commit request
 
       # check response
+      response[:TransactionState].should match /^success$/
       response[:Code].should match /^201.0000$/
       response[:Description].should match /^The resource was successfully created.$/
       response[:Severity].should match /^information$/
     end
 
-    it "should receive the adequate failure-response for a debit request with missing account holder info", :pending => true do
+    # debit (failed)
+    it "should receive a failure-response for a debit request with missing account holder info" do
+      
+      # invalidate request
       @options[:sepa_account].first_name = nil
       @options[:sepa_account].last_name = nil
 
+      # send request and catch response
       request = @gateway.build_request :debit, 100.0, @options
       response = @gateway.commit request
 
-      response.should match '<transaction-state>failed</transaction-state>'
+      # check response
+      response[:TransactionState].should match /^failed$/
+      response[:Code].should match /^400./ 
+      # Note: slightly different error message than given in the spec (p. 74)
+      response[:Severity].should match /^error$/
     end
     
-    it "should receive the success-response for correct credit request"
-    it "should receive the failure-response for false credit request"
+    # authorization (success)
+    it "should receive the success-response for a correct authorization request" do
+
+      # send valid request and catch response
+      request = @gateway.build_request :authorize, 100.0, @options
+      response = @gateway.commit request
+
+      # check response
+      response[:TransactionState].should match /^success$/
+      response[:Code].should match /^201.0000$/
+      response[:Description].should match /^The resource was successfully created.$/
+      response[:Severity].should match /^information$/
+    end
+
+    # authorization (failed)
+    it "should receive the failure-response for an authorization request WITH reference-id" do
+
+      # add provider-transaction-reference-id to the request (forbidden)
+      request = @gateway.build_request :authorize, 100.0, @options
+      request = request.insert(-12, "  <provider-transaction-reference-id>68E34C9581</provider-transaction-reference-id>\n") 
+      response = @gateway.commit request
+
+      # check response
+      response[:TransactionState].should match /^failed$/
+      response[:Code].should match /^400.1031/
+      # Note: specification (p. 83) reports a different error (missing iban) - but one that does not make sense here
+      #       server replies with a "syntax error, 400.1031"
+      response[:Severity].should match /^error$/
+    end
+
+    # credit (success)
+    it "should receive the success-response for a correct credit request" do
+      
+      # send valid request and catch response
+      request = @gateway.build_request :credit, 100.0, @options
+      response = @gateway.commit request
+
+      # check response
+      response[:TransactionState].should match /^success$/
+      response[:Code].should match /^201.0000$/
+      response[:Description].should match /^The resource was successfully created.$/
+      response[:Severity].should match /^information$/
+    end
+
+    # credit (failed)
+    it "should receive the failure-response for a credit request with missing IBAN" do
+
+      # invalidate request
+      @options[:sepa_account].iban = nil
+
+      # send request and catch response
+      request = @gateway.build_request :credit, 100.0, @options
+      response = @gateway.commit request
+
+      # check response
+      response[:TransactionState].should match /^failed$/
+      response[:Code].should match /^400.1081/
+      response[:Description].should match /The Bank Account IBAN information has not been provided.  Please check your input and try again./
+      response[:Severity].should match /^error$/
+    end
+
+    # void-debit (success)
+    it "should receive the success-response for a correct void-debit request", :pending => true do
+
+      # send valid request and catch response
+      request = @gateway.build_request :void_debit, 100.0, @options
+      response = @gateway.commit request
+      
+      # problem: we would need a valid/current parent-transaction-id for this test to pass
+      puts "\n -- response-message: " + response[:Description]
+      
+      # check response
+      response[:TransactionState].should match /^success$/
+      response[:Code].should match /^200.0000$/
+      response[:Description].should match /^Request successful$/
+      response[:Severity].should match /^information$/
+    end
+
+    # void-debit (failed)
+    it "should receive the failure-response for a void-debit request without parent-transaction-id" do
+      
+      # invalidate request
+      request = @gateway.build_request :void_debit, 100.0, @options
+      request.gsub!(%r{\n  <parent-transaction-id>.+</parent-transaction-id>}, '')
+
+      response = @gateway.commit request
+
+      # check response
+      response[:TransactionState].should match /^failed$/
+      response[:Code].should match /^400.1021$/
+      response[:Description].should match "The Parent Transaction Id is required, and not provided.  Please check your input and try again"
+      response[:Severity].should match /^error$/
+    end
+
+    # void-credit (success)
+    it "should receive the success-response for a correct void-credit request", :pending => true do
+
+      # send valid request and catch response
+      request = @gateway.build_request :void_credit, 100.0, @options
+      response = @gateway.commit request
+
+      # problem: we would need a valid/current parent-transaction-id for this test to pass
+      puts "\n -- response-message: " + response[:Description]
+      
+      # check response
+      response[:TransactionState].should match /^success$/
+      response[:Code].should match /^200.0000$/
+      response[:Description].should match /^Request successful$/
+      response[:Severity].should match /^information$/
+    end
+
+    # void-credit (failed)
+    it "should receive the failure-response for a void-credit request with missing parent-transaction-id" do
+
+      # invalidate request
+      request = @gateway.build_request :void_credit, 100.0, @options
+      request.gsub!(%r{\n  <parent-transaction-id>.+</parent-transaction-id>}, '')
+      response = @gateway.commit request
+
+      # check response
+      response[:TransactionState].should match /^failed$/
+      response[:Code].should match /^400.1021$/
+      response[:Description].should match "The Parent Transaction Id is required, and not provided.  Please check your input and try again"
+      response[:Severity].should match /^error$/
+    end
   end
 end
 

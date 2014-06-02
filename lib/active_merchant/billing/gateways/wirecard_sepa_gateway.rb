@@ -7,7 +7,6 @@ module ActiveMerchant
         # verify that username and password are supplied
         requires!(options, :login, :password)
         requires!(options, :merchant_account_id)
-        requires!(options, :merchant_account_name)
         @options = options
         super
       end
@@ -23,52 +22,25 @@ module ActiveMerchant
       TEST_LOGIN = "70000-APITEST-AP"
       TEST_PASSWORD = "qD2wzQ_hrc!8"
 
-
       #########
       #  API  #
       #########
 
-      # charge money from account
-      def debit(money, account, options = {})
-        prepare_options_hash(options)
-        @options[:sepa_account] = account
-        request = build_request :debit, money, @options
-        commit request
+      # define following methods for each transaction type
+      # all methods are passed 3 arguments:
+      #   + money (decimal)
+      #   + account object
+      #   + options hash
+
+      [:debit, :credit, :void_debit, :void_credit, :authorize].each do |type|
+        define_method type, lambda { |money, account, options|
+          requires!(options, :request_id)
+          prepare_options_hash(options)
+          @options[:sepa_account] = account
+          request = build_request type, money, @options
+          commit request
+        }
       end
-
-      # credit money to account
-      def credit(money, account, options = {})
-        prepare_options_hash(options)
-        @options[:sepa_account] = account        
-        request = build_request :credit, money, @options
-        commit request
-      end
-
-      # cancel debit transaction
-      def void_debit(money, account, options = {})
-        prepare_options_hash(options)
-        @options[:sepa_account] = account
-        request = build_request :void_debit, money, @options
-        commit request
-      end
-
-      # cancel credit transaction
-      def void_credit(money, account, options = {})
-        prepare_options_hash(options)
-        @options[:sepa_account] = account
-        request = build_request :void_credit, money, @options
-        commit request
-      end
-
-      # send transaction to wirecard for further reference only
-      def authorize(money, account, options = {})
-        prepare_options_hash(options)
-        @options[:sepa_account] = account
-        request = build_request :authorize, money, @options
-        commit request
-      end
-
-
 
       ###########
       # helpers #
@@ -82,7 +54,7 @@ module ActiveMerchant
 
         xml.tag! :payment, :xmlns => "http://www.elastic-payments.com/schema/payment" do
           xml.tag! :'merchant-account-id', @options[:merchant_account_id]
-          xml.tag! :'request-id', Digest::SHA1.hexdigest(Time.now.to_s)
+          xml.tag! :'request-id', options[:request_id]
 
           add_transaction_data(xml, action, money, options)
         end

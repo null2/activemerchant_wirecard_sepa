@@ -1,5 +1,6 @@
 require 'spec_helper'
 require 'rexml/document'
+require 'digest/sha1'
 
 describe ActiveMerchant::Billing::WirecardSepaGateway do
   before :all do 
@@ -25,7 +26,9 @@ describe ActiveMerchant::Billing::WirecardSepaGateway do
       @account.iban = "GR1601101250000000012300695"
       @account.bic = "PBNKDEFF"
 
-      @options = { :sepa_account => @account }
+      @options = { :sepa_account => @account,
+                   :request_id => Digest::SHA1.hexdigest(Time.now.to_s)
+                 }
     end
 
     it "should produce valid XML for a pending debit request" do
@@ -75,7 +78,10 @@ describe ActiveMerchant::Billing::WirecardSepaGateway do
       @account.iban = "GR1601101250000000012300695"
       @account.bic = "PBNKDEFF"
 
-      @options = { :sepa_account => @account, :test => true }
+      @options = { :sepa_account => @account, 
+                   :test => true, 
+                   :request_id => Digest::SHA1.hexdigest(Time.now.to_s)
+                 }
 
       @headers = { 'Content-Type' => 'text/xml',
                     'Authorization' => @gateway.encoded_credentials }
@@ -278,8 +284,8 @@ describe ActiveMerchant::Billing::WirecardSepaGateway do
     end
 
     # Response object
-    it "should return a valid Response object for a valid request", :focus => true do
-      response = @gateway.debit(100.0, @account, {})
+    it "should return a valid Response object for a valid request" do
+      response = @gateway.debit(100.0, @account, { :request_id => Digest::SHA1.hexdigest(Time.now.to_s) })
       response.success?.should be_true
     end
   end

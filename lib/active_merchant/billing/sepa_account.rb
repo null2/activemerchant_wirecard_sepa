@@ -6,6 +6,13 @@ module ActiveMerchant
       attr_accessor :first_name, :last_name
     	attr_accessor :iban, :bic
 
+      def initialize options={}
+        self.first_name = options[:first_name]
+        self.last_name = options[:last_name]
+        self.iban = options[:iban]
+        self.bic = options[:bic]
+      end
+
     	def validate
         errors.add :first_name, 'activerecord.errors.messages.empty'      if @first_name.blank?
         errors.add :last_name,  'activerecord.errors.messages.empty'      if @last_name.blank?

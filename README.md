@@ -1,6 +1,9 @@
-# ActivemerchantWirecardSepa
+ActiveMerchant Wirecard Sepa Payment Processing
+-----
 
-TODO: Write a gem description
+Implements the Wirecard SEPA Payments REST API as separate 
+Gateway. Currently supports all but the recurring transaction types.
+Extensively tested via RSpec.
 
 ## Installation
 
@@ -18,7 +21,49 @@ Or install it yourself as:
 
 ## Usage
 
-TODO: Write usage instructions here
+To use this extension, roughly follow this pattern:
+
+```ruby
+require 'digest/sha1'
+
+gateway_options = {
+  :login => "yourlogin",
+  :password => "yourpassword",
+  :merchant_account_id => "yourid",
+  :merchant_account_name => "account name (optional)"
+}
+
+# instantiate a new Gateway with options
+gw = ActiveMerchant::Billing::WirecardSepaGateway.new gateway_options
+
+# create an Account data structure to hold our data
+account = ActiveMerchant::Billing::SepaAccount.new :iban => "DEA342....",
+  :bic => "BIC2343..",
+  :first_name => "Karl-Heinz",
+  :last_name => "Mustermann"
+
+# buy something via SEPA direct debit
+response = gw.debit 100.0, account, :mandate_id => "a special id",
+  :request_id => Digest::SHA1.hexdigest(Time.now.to_i), # must be different for each and every request
+  :signed_date => Date.today
+
+if response.success?
+  # ...handle result
+end
+```
+
+Implemented methods are:
+
+* debit
+* credit
+* void-credit
+* void-debit
+* authorize
+
+## TODO:
+
+* recurring debit transactions
+* recurring credit transactions
 
 ## Contributing
 

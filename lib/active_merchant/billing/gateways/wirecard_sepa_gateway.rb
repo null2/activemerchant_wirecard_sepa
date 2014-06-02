@@ -85,8 +85,8 @@ module ActiveMerchant
             :account_holder => options[:sepa_account],
             :payment_method => "sepadirectdebit", 
             :bank_account => options[:sepa_account],
-            :mandate => options[:sepa_account],
-            :creditor_id => "ASD232XSFGNW"
+            :mandate => options,
+            :creditor_id => options[:creditor_id]
 
         when :credit
           apply_properties xml, :transaction_type => 'pending-credit',
@@ -98,13 +98,13 @@ module ActiveMerchant
         when :void_debit
           apply_properties xml, :transaction_type => 'void-debit',
             :requested_amount => money,
-            :parent_transaction_id  => '3f8e01bc-9203-11e2-abbd-005056a96a54',
+            :parent_transaction_id  => options[:parent_transaction_id],
             :payment_method => "sepadirectdebit"
         
         when :void_credit
           apply_properties xml, :transaction_type => 'void-credit',
             :requested_amount => money,
-            :parent_transaction_id  => '3f8e01bc-9203-11e2-abbd-005056a96a54',
+            :parent_transaction_id  => options[:parent_transaction_id],
             :payment_method => 'sepacredit'
 
         when :authorize
@@ -143,10 +143,10 @@ module ActiveMerchant
         end
       end
 
-      def add_mandate xml, account
+      def add_mandate xml, options
           xml.tag! :mandate do
-            xml.tag! :'mandate-id', 12345678 #Digest::SHA1.hexdigest(account.to_s)
-            xml.tag! :'signed-date', Date.new(2013,9,24)
+            xml.tag! :'mandate-id', options[:mandate_id]
+            xml.tag! :'signed-date', options[:signed_date]
           end
       end
 
@@ -208,7 +208,7 @@ module ActiveMerchant
         headers = { 'Content-Type' => 'text/xml',
                     'Authorization' => encoded_credentials }
 
-        response = parse(ssl_post(test? ? TEST_URL : 'http://live-url.com', request, headers))
+        response = parse(ssl_post(test? ? TEST_URL : LIVE_URL, request, headers))
         
         # parse the reply into a Response object
         success = response[:TransactionState] == 'success'

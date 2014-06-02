@@ -78,10 +78,14 @@ describe ActiveMerchant::Billing::WirecardSepaGateway do
       @account.iban = "GR1601101250000000012300695"
       @account.bic = "PBNKDEFF"
 
-      @options = { :sepa_account => @account, 
-                   :test => true, 
-                   :request_id => Digest::SHA1.hexdigest(Time.now.to_s)
-                 }
+      @options = { 
+        :sepa_account => @account, 
+        :test => true, 
+        :request_id => Digest::SHA1.hexdigest(Time.now.to_s),
+        :mandate_id => "hehe",
+        :signed_date => Date.today,
+        :creditor_id => "hahahahhah"
+      }
 
       @headers = { 'Content-Type' => 'text/xml',
                     'Authorization' => @gateway.encoded_credentials }
@@ -112,7 +116,6 @@ describe ActiveMerchant::Billing::WirecardSepaGateway do
 
     # debit (success)
     it "should receive the success-response for a correct debit request" do
-
       # send request and catch response
       request = @gateway.build_request :debit, 100.0, @options
       response = @gateway.parse(@gateway.ssl_post(@test_url, request, @headers))
@@ -196,7 +199,6 @@ describe ActiveMerchant::Billing::WirecardSepaGateway do
       request = @gateway.build_request :credit, 100.0, @options
       response = @gateway.parse(@gateway.ssl_post(@test_url, request, @headers))
 
-
       # check response
       response[:TransactionState].should match /^failed$/
       response[:Code].should match /^400.1081/
@@ -206,7 +208,6 @@ describe ActiveMerchant::Billing::WirecardSepaGateway do
 
     # void-debit (success)
     it "should receive the success-response for a correct void-debit request" do
-
       # create a parent transaction, because parent-transaction-id will be needed
       request = @gateway.build_request :debit, 101.0, @options
       unparsed_response = @gateway.ssl_post(@test_url, request, @headers)
@@ -214,13 +215,16 @@ describe ActiveMerchant::Billing::WirecardSepaGateway do
       xml = REXML::Document.new unparsed_response
       parent_id = REXML::XPath.first(xml, "//transaction-id").text
 
+      @options.update :parent_transaction_id => parent_id, 
+        :request_id => Digest::SHA1.hexdigest(Time.now.to_s)
+
       # insert current parent-transaction-id
       request = @gateway.build_request :void_debit, 101.0, @options
-      request.gsub!(%r{<parent-transaction-id>.+</parent-transaction-id>}, 
+      request.gsub!(%r{<parent-transaction-id>.*</parent-transaction-id>}, 
                     "<parent-transaction-id>#{parent_id}</parent-transaction-id>")
 
       response = @gateway.parse(@gateway.ssl_post(@test_url, request, @headers))
-      
+
       # check response
       response[:TransactionState].should match /^success$/
       response[:Code].should match /^200.0000$/
@@ -232,11 +236,12 @@ describe ActiveMerchant::Billing::WirecardSepaGateway do
     it "should receive the failure-response for a void-debit request without parent-transaction-id" do
       
       # invalidate request
+      @options.update :parent_transaction_id => ''
       request = @gateway.build_request :void_debit, 100.0, @options
-      request.gsub!(%r{\n  <parent-transaction-id>.+</parent-transaction-id>}, '')
-
+      request.gsub!(%r{\n  <parent-transaction-id>.*</parent-transaction-id>}, '')
+      
       response = @gateway.parse(@gateway.ssl_post(@test_url, request, @headers))
-
+      
       # check response
       response[:TransactionState].should match /^failed$/
       response[:Code].should match /^400.1021$/
@@ -253,6 +258,9 @@ describe ActiveMerchant::Billing::WirecardSepaGateway do
 
       xml = REXML::Document.new unparsed_response
       parent_id = REXML::XPath.first(xml, "//transaction-id").text
+
+      @options.update :parent_transaction_id => parent_id,
+        :request_id => Digest::SHA1.hexdigest(Time.now.to_s)
 
       # insert current parent-transaction-id
       request = @gateway.build_request :void_credit, 101.0, @options
@@ -272,8 +280,9 @@ describe ActiveMerchant::Billing::WirecardSepaGateway do
     it "should receive the failure-response for a void-credit request with missing parent-transaction-id" do
 
       # invalidate request
+      @options.update :parent_transaction_id => ""
       request = @gateway.build_request :void_credit, 100.0, @options
-      request.gsub!(%r{\n  <parent-transaction-id>.+</parent-transaction-id>}, '')
+      request.gsub!(%r{\n  <parent-transaction-id>.*</parent-transaction-id>}, '')
       response = @gateway.parse(@gateway.ssl_post(@test_url, request, @headers))
 
       # check response
@@ -285,7 +294,11 @@ describe ActiveMerchant::Billing::WirecardSepaGateway do
 
     # Response object
     it "should return a valid Response object for a valid request" do
-      response = @gateway.debit(100.0, @account, { :request_id => Digest::SHA1.hexdigest(Time.now.to_s) })
+      response = @gateway.debit 100.0, @account, :request_id => Digest::SHA1.hexdigest(Time.now.to_s), 
+        :mandate_id => "hoolahoop",
+        :signed_date => Date.today,
+        :creditor_id => "CharlieAndTheChocolateFactorial"
+
       response.success?.should be_true
     end
   end

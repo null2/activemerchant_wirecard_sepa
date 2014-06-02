@@ -2,11 +2,22 @@ require 'spec_helper'
 require 'rexml/document'
 
 describe ActiveMerchant::Billing::WirecardSepaGateway do
+  before :all do 
+    @gateway_options = {
+      :login => ActiveMerchant::Billing::WirecardSepaGateway::TEST_LOGIN,
+      :password => ActiveMerchant::Billing::WirecardSepaGateway::TEST_PASSWORD,
+      :merchant_account_id => ActiveMerchant::Billing::WirecardSepaGateway::TEST_MERCHANT_ACCOUNT_ID,
+      :merchant_account_name => ActiveMerchant::Billing::WirecardSepaGateway::TEST_MERCHANT_ACCOUNT_NAME,
+      :test => true
+    }
+    @test_url = ActiveMerchant::Billing::WirecardSepaGateway::TEST_URL
+  end
+
   describe "XML validation" do
     before :each do
       @schema = Nokogiri::XML::Schema(File.read(PROJECT_ROOT + "/validation/payment.xsd"))
 
-      @gateway = ActiveMerchant::Billing::WirecardSepaGateway.new
+      @gateway = ActiveMerchant::Billing::WirecardSepaGateway.new @gateway_options
 
       @account = ActiveMerchant::Billing::SepaAccount.new
       @account.first_name = "Vorname"
@@ -56,7 +67,7 @@ describe ActiveMerchant::Billing::WirecardSepaGateway do
 
   describe "XML integration test" do
     before :each do
-      @gateway = ActiveMerchant::Billing::WirecardSepaGateway.new
+      @gateway = ActiveMerchant::Billing::WirecardSepaGateway.new @gateway_options
 
       @account = ActiveMerchant::Billing::SepaAccount.new
       @account.first_name = "hasf"
@@ -64,11 +75,10 @@ describe ActiveMerchant::Billing::WirecardSepaGateway do
       @account.iban = "GR1601101250000000012300695"
       @account.bic = "PBNKDEFF"
 
-      @options = { :sepa_account => @account }
+      @options = { :sepa_account => @account, :test => true }
 
       @headers = { 'Content-Type' => 'text/xml',
                     'Authorization' => @gateway.encoded_credentials }
-      @TEST_URL = 'https://api-test.wirecard.com/engine/rest/paymentmethods/'
 
     end
 
@@ -99,7 +109,7 @@ describe ActiveMerchant::Billing::WirecardSepaGateway do
 
       # send request and catch response
       request = @gateway.build_request :debit, 100.0, @options
-      response = @gateway.parse(@gateway.ssl_post(@TEST_URL, request, @headers))
+      response = @gateway.parse(@gateway.ssl_post(@test_url, request, @headers))
 
       # check response
       response[:TransactionState].should match /^success$/
@@ -117,7 +127,7 @@ describe ActiveMerchant::Billing::WirecardSepaGateway do
 
       # send request and catch response
       request = @gateway.build_request :debit, 100.0, @options
-      response = @gateway.parse(@gateway.ssl_post(@TEST_URL, request, @headers))
+      response = @gateway.parse(@gateway.ssl_post(@test_url, request, @headers))
 
       # check response
       response[:TransactionState].should match /^failed$/
@@ -131,7 +141,7 @@ describe ActiveMerchant::Billing::WirecardSepaGateway do
 
       # send valid request and catch response
       request = @gateway.build_request :authorize, 100.0, @options
-      response = @gateway.parse(@gateway.ssl_post(@TEST_URL, request, @headers))
+      response = @gateway.parse(@gateway.ssl_post(@test_url, request, @headers))
 
       # check response
       response[:TransactionState].should match /^success$/
@@ -146,7 +156,7 @@ describe ActiveMerchant::Billing::WirecardSepaGateway do
       # add provider-transaction-reference-id to the request (forbidden)
       request = @gateway.build_request :authorize, 100.0, @options
       request = request.insert(-12, "  <provider-transaction-reference-id>68E34C9581</provider-transaction-reference-id>\n") 
-      response = @gateway.parse(@gateway.ssl_post(@TEST_URL, request, @headers))
+      response = @gateway.parse(@gateway.ssl_post(@test_url, request, @headers))
 
       # check response
       response[:TransactionState].should match /^failed$/
@@ -161,7 +171,7 @@ describe ActiveMerchant::Billing::WirecardSepaGateway do
       
       # send valid request and catch response
       request = @gateway.build_request :credit, 100.0, @options
-      response = @gateway.parse(@gateway.ssl_post(@TEST_URL, request, @headers))
+      response = @gateway.parse(@gateway.ssl_post(@test_url, request, @headers))
 
       # check response
       response[:TransactionState].should match /^success$/
@@ -178,7 +188,7 @@ describe ActiveMerchant::Billing::WirecardSepaGateway do
 
       # send request and catch response
       request = @gateway.build_request :credit, 100.0, @options
-      response = @gateway.parse(@gateway.ssl_post(@TEST_URL, request, @headers))
+      response = @gateway.parse(@gateway.ssl_post(@test_url, request, @headers))
 
 
       # check response
@@ -193,7 +203,7 @@ describe ActiveMerchant::Billing::WirecardSepaGateway do
 
       # create a parent transaction, because parent-transaction-id will be needed
       request = @gateway.build_request :debit, 101.0, @options
-      unparsed_response = @gateway.ssl_post(@TEST_URL, request, @headers)
+      unparsed_response = @gateway.ssl_post(@test_url, request, @headers)
 
       xml = REXML::Document.new unparsed_response
       parent_id = REXML::XPath.first(xml, "//transaction-id").text
@@ -203,7 +213,7 @@ describe ActiveMerchant::Billing::WirecardSepaGateway do
       request.gsub!(%r{<parent-transaction-id>.+</parent-transaction-id>}, 
                     "<parent-transaction-id>#{parent_id}</parent-transaction-id>")
 
-      response = @gateway.parse(@gateway.ssl_post(@TEST_URL, request, @headers))
+      response = @gateway.parse(@gateway.ssl_post(@test_url, request, @headers))
       
       # check response
       response[:TransactionState].should match /^success$/
@@ -219,7 +229,7 @@ describe ActiveMerchant::Billing::WirecardSepaGateway do
       request = @gateway.build_request :void_debit, 100.0, @options
       request.gsub!(%r{\n  <parent-transaction-id>.+</parent-transaction-id>}, '')
 
-      response = @gateway.parse(@gateway.ssl_post(@TEST_URL, request, @headers))
+      response = @gateway.parse(@gateway.ssl_post(@test_url, request, @headers))
 
       # check response
       response[:TransactionState].should match /^failed$/
@@ -233,7 +243,7 @@ describe ActiveMerchant::Billing::WirecardSepaGateway do
 
       # create a parent transaction, because parent-transaction-id will be needed
       request = @gateway.build_request :credit, 101.0, @options
-      unparsed_response = @gateway.ssl_post(@TEST_URL, request, @headers)
+      unparsed_response = @gateway.ssl_post(@test_url, request, @headers)
 
       xml = REXML::Document.new unparsed_response
       parent_id = REXML::XPath.first(xml, "//transaction-id").text
@@ -243,7 +253,7 @@ describe ActiveMerchant::Billing::WirecardSepaGateway do
       request.gsub!(%r{<parent-transaction-id>.+</parent-transaction-id>}, 
                     "<parent-transaction-id>#{parent_id}</parent-transaction-id>")
 
-      response = @gateway.parse(@gateway.ssl_post(@TEST_URL, request, @headers))
+      response = @gateway.parse(@gateway.ssl_post(@test_url, request, @headers))
 
       # check response
       response[:TransactionState].should match /^success$/
@@ -258,13 +268,19 @@ describe ActiveMerchant::Billing::WirecardSepaGateway do
       # invalidate request
       request = @gateway.build_request :void_credit, 100.0, @options
       request.gsub!(%r{\n  <parent-transaction-id>.+</parent-transaction-id>}, '')
-      response = @gateway.parse(@gateway.ssl_post(@TEST_URL, request, @headers))
+      response = @gateway.parse(@gateway.ssl_post(@test_url, request, @headers))
 
       # check response
       response[:TransactionState].should match /^failed$/
       response[:Code].should match /^400.1021$/
       response[:Description].should match "The Parent Transaction Id is required, and not provided.  Please check your input and try again"
       response[:Severity].should match /^error$/
+    end
+
+    # Response object
+    it "should return a valid Response object for a valid request", :focus => true do
+      response = @gateway.debit(100.0, @account, {})
+      response.success?.should be_true
     end
   end
 end

@@ -3,23 +3,36 @@ module ActiveMerchant
     class WirecardSepaGateway < Gateway
       require 'digest/sha1'
 
+      def initialize(options = {})
+        # verify that username and password are supplied
+        requires!(options, :login, :password)
+        requires!(options, :merchant_account_id)
+        requires!(options, :merchant_account_name)
+        @options = options
+        super
+      end
+
       # Test server location
       TEST_URL = 'https://api-test.wirecard.com/engine/rest/paymentmethods/'
      
       # Live server location
       LIVE_URL = 'https://c3.wirecard.com/secure/ssl-gateway'
 
-
       TEST_MERCHANT_ACCOUNT_ID = "4c901196-eff7-411e-82a3-5ef6b6860d64"
       TEST_MERCHANT_ACCOUNT_NAME = "WD SEPA Test"
-      TEST_USER_NAME = "70000-APITEST-AP"
+      TEST_LOGIN = "70000-APITEST-AP"
       TEST_PASSWORD = "qD2wzQ_hrc!8"
+
+
+      #########
+      #  API  #
+      #########
 
       # charge money from account
       def debit(money, account, options = {})
         prepare_options_hash(options)
         @options[:sepa_account] = account
-        request = build_request :debit, money, options
+        request = build_request :debit, money, @options
         commit request
       end
 
@@ -27,7 +40,7 @@ module ActiveMerchant
       def credit(money, account, options = {})
         prepare_options_hash(options)
         @options[:sepa_account] = account        
-        request = build_request :credit, money, options
+        request = build_request :credit, money, @options
         commit request
       end
 
@@ -35,7 +48,7 @@ module ActiveMerchant
       def void_debit(money, account, options = {})
         prepare_options_hash(options)
         @options[:sepa_account] = account
-        request = build_request :void_debit, money, options
+        request = build_request :void_debit, money, @options
         commit request
       end
 
@@ -43,7 +56,7 @@ module ActiveMerchant
       def void_credit(money, account, options = {})
         prepare_options_hash(options)
         @options[:sepa_account] = account
-        request = build_request :void_credit, money, options
+        request = build_request :void_credit, money, @options
         commit request
       end
 
@@ -51,9 +64,15 @@ module ActiveMerchant
       def authorize(money, account, options = {})
         prepare_options_hash(options)
         @options[:sepa_account] = account
-        request = build_request :authorize, money, options
+        request = build_request :authorize, money, @options
         commit request
       end
+
+
+
+      ###########
+      # helpers #
+      ###########
 
       # Generates the complete xml-message that gets sent to the gateway
       # Symbol, Integer, {} -> XML-String
@@ -62,7 +81,7 @@ module ActiveMerchant
         xml.instruct! :xml, :encoding => "UTF-8", :standalone => "yes"
 
         xml.tag! :payment, :xmlns => "http://www.elastic-payments.com/schema/payment" do
-          xml.tag! :'merchant-account-id', TEST_MERCHANT_ACCOUNT_ID
+          xml.tag! :'merchant-account-id', @options[:merchant_account_id]
           xml.tag! :'request-id', Digest::SHA1.hexdigest(Time.now.to_s)
 
           add_transaction_data(xml, action, money, options)
@@ -191,6 +210,8 @@ module ActiveMerchant
           response[:Code] = status.attributes["code"]
           response[:Description] = status.attributes["description"]
           response[:Severity] = status.attributes["severity"]
+          response[:GuWID] = status.attributes["transaction-id"]
+          response[:RequestId] = status.attributes["request-id"]
 
         else
           # ...or add general failure message
@@ -200,9 +221,13 @@ module ActiveMerchant
         response
       end
 
+      # Should run against the test servers or not?
+      def test?
+        @options[:test] || super
+      end
+
       def encoded_credentials
-        #credentials = [@options[:login], @options[:password]].join(':')
-        credentials = [TEST_USER_NAME, TEST_PASSWORD].join(':')
+        credentials = [@options[:login], @options[:password]].join(':')
         "Basic " << Base64.encode64(credentials).strip
       end
 
@@ -211,19 +236,25 @@ module ActiveMerchant
         headers = { 'Content-Type' => 'text/xml',
                     'Authorization' => encoded_credentials }
 
-        response = parse(ssl_post(TEST_URL, request, headers))
+        response = parse(ssl_post(test? ? TEST_URL : 'http://live-url.com', request, headers))
         
-        # TODO ?: parse the reply into a Response object
+        # parse the reply into a Response object
         success = response[:TransactionState] == 'success'
-        
-        #response
-        12
-        
+        message = response[:Description]
+        authorization = (success && @options[:action] == :authorization) ? response[:GuWID] : nil
+
+        Response.new(success, message, response,
+          :test => test?,
+          :authorization => authorization
+        )
+      
       end
+
+      def prepare_options_hash(options)
+        @options.update(options)
+        #setup_address_hash!(options)
+      end
+
     end
   end
 end
-
-
-
-

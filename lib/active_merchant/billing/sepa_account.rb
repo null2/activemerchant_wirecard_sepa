@@ -27,6 +27,10 @@ module ActiveMerchant
       def to_s
         @iban
       end
+      
+      def country 
+        @iban.slice(0,2) if @iban
+      end
     end
   end
 end

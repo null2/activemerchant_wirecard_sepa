@@ -7,10 +7,10 @@ module ActiveMerchant
     	attr_accessor :iban, :bic
 
       def initialize options={}
-        self.first_name = options[:first_name]
-        self.last_name = options[:last_name]
-        self.iban = options[:iban]
-        self.bic = options[:bic]
+        self.first_name = options[:first_name].strip
+        self.last_name = options[:last_name].strip
+        self.iban = options[:iban].strip
+        self.bic = options[:bic].strip
       end
 
     	def validate

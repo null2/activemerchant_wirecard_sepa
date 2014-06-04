@@ -125,6 +125,8 @@ describe ActiveMerchant::Billing::WirecardSepaGateway do
       response[:Code].should match /^201.0000$/
       response[:Description].should match /^The resource was successfully created.$/
       response[:Severity].should match /^information$/
+      response[:GuWID].should_not be_nil
+      response[:RequestId].should_not be_nil
     end
 
     # debit (failed)

@@ -173,17 +173,20 @@ module ActiveMerchant
 
         # every Wirecard-Response, success or failure, must have a status and transaction-state
         status = REXML::XPath.first(xml, "//status")
+        transaction_id = REXML::XPath.first(xml, "//transaction-id")
+        request_id = REXML::XPath.first(xml, "//request-id")
         transaction_state = REXML::XPath.first(xml, "//transaction-state")
         
-        if status and transaction_state and transaction_state.text
+        if status and transaction_state and transaction_state.text and
+           transaction_id and request_id
 
           # either extract response values...
           response[:TransactionState] = transaction_state.text
           response[:Code] = status.attributes["code"]
           response[:Description] = status.attributes["description"]
           response[:Severity] = status.attributes["severity"]
-          response[:GuWID] = status.attributes["transaction-id"]
-          response[:RequestId] = status.attributes["request-id"]
+          response[:GuWID] = transaction_id.text
+          response[:RequestId] = request_id.text
 
         else
           # ...or add general failure message

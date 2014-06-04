@@ -177,16 +177,15 @@ module ActiveMerchant
         request_id = REXML::XPath.first(xml, "//request-id")
         transaction_state = REXML::XPath.first(xml, "//transaction-state")
         
-        if status and transaction_state and transaction_state.text and
-           transaction_id and request_id
+        if status and transaction_state and transaction_state.text
 
           # either extract response values...
           response[:TransactionState] = transaction_state.text
           response[:Code] = status.attributes["code"]
           response[:Description] = status.attributes["description"]
           response[:Severity] = status.attributes["severity"]
-          response[:GuWID] = transaction_id.text
-          response[:RequestId] = request_id.text
+          response[:GuWID] = transaction_id.text if transaction_id
+          response[:RequestId] = request_id.text if request_id
 
         else
           # ...or add general failure message

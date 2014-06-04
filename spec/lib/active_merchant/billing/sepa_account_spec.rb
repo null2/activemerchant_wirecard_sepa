@@ -4,8 +4,8 @@ describe ActiveMerchant::Billing::SepaAccount do
 
   before :each do
   	@account = ActiveMerchant::Billing::SepaAccount.new
-  	@account.first_name = Faker::Name.first_name
-  	@account.last_name = Faker::Name.last_name
+  	@account.first_name = "Herbert"
+  	@account.last_name = "Gisela"
     @account.iban = 'GR1601101250000000012300695'
     @account.bic = 'PBNKDEFF'
   end

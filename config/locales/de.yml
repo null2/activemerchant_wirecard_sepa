@@ -1,0 +1,5 @@
+de:
+    activerecord: 
+        errors:
+            empty: "Muss ausgefüllt werden"
+            invalid: "Invalides Format"

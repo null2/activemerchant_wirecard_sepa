@@ -1,0 +1,5 @@
+en:
+    activerecord: 
+        errors:
+            empty: "Must be provided"
+            invalid: "Invalid format"

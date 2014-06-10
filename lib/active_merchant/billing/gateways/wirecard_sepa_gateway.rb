@@ -31,7 +31,7 @@ module ActiveMerchant
 
       # define following methods for each transaction type
       # all methods are passed 3 arguments:
-      #   + money (decimal)
+      #   + money (Money)
       #   + account object
       #   + options hash
 
@@ -50,10 +50,10 @@ module ActiveMerchant
       ###########
 
       # Generates the complete xml-message that gets sent to the gateway
-      # Symbol, Integer, {} -> XML-String
+      # Symbol, Money, {} -> XML-String
       def build_request(action, money, options = {})
-        raise ActiveMerchant::Billing::MalformedException, "action specification is invalid" unless action.class == :a.class
-        raise ActiveMerchant::Billing::MalformedException, "requested amount specification is invalid" unless money.class == 1.class or money.class == 1.0.class
+        raise ActiveMerchant::Billing::MalformedException, "action specification is invalid" unless action.class == Symbol
+        raise ActiveMerchant::Billing::MalformedException, "requested amount specification is invalid" unless money.class == Money
         
         xml = Builder::XmlMarkup.new :indent => 2
         xml.instruct! :xml, :encoding => "UTF-8", :standalone => "yes"
@@ -65,7 +65,8 @@ module ActiveMerchant
           xml.tag! :'merchant-account-id', @options[:merchant_account_id]
           xml.tag! :'request-id', options[:request_id]
 
-          add_transaction_data(xml, action, money, options)
+          amount = I18n.with_locale(:en) { money.to_s }
+          add_transaction_data(xml, action, amount, options)
         end
 
         xml.target!
@@ -80,7 +81,7 @@ module ActiveMerchant
       end
 
       # adds transaction information to the XML-objec  
-      # Builder::XmlMarkup, Symbol, Money, {} -> Builder::XmlMarkup
+      # Builder::XmlMarkup, Symbol, String, {} -> Builder::XmlMarkup
       #
       # ASSUMES: options contains information about creditor-id and signed-date,
       #          parent-transaction-id

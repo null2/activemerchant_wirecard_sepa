@@ -9,8 +9,8 @@ module ActiveMerchant
       def initialize options={}
         self.first_name = options[:first_name].strip if options[:first_name]
         self.last_name = options[:last_name].strip if options[:last_name]
-        self.iban = options[:iban].strip if options[:iban]
-        self.bic = options[:bic].strip if options[:bic]
+        self.iban = options[:iban].gsub(/\s+/, "") if options[:iban]
+        self.bic = options[:bic].gsub(/\s+/, "") if options[:bic]
       end
 
       def validate

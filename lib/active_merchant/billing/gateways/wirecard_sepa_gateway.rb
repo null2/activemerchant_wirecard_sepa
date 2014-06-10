@@ -1,5 +1,8 @@
 module ActiveMerchant
   module Billing
+    class MalformedException < StandardError
+    end
+
     class WirecardSepaGateway < Gateway
       require 'digest/sha1'
 
@@ -49,10 +52,16 @@ module ActiveMerchant
       # Generates the complete xml-message that gets sent to the gateway
       # Symbol, Integer, {} -> XML-String
       def build_request(action, money, options = {})
+        raise ActiveMerchant::Billing::MalformedException, "action specification is invalid" unless action.class == :a.class
+        raise ActiveMerchant::Billing::MalformedException, "requested amount specification is invalid" unless money.class == 1.class or money.class == 1.0.class
+        
         xml = Builder::XmlMarkup.new :indent => 2
         xml.instruct! :xml, :encoding => "UTF-8", :standalone => "yes"
 
         xml.tag! :payment, :xmlns => "http://www.elastic-payments.com/schema/payment" do
+          raise ActiveMerchant::Billing::MalformedException, "merchant account id must be supplied" unless @options[:merchant_account_id]
+          raise ActiveMerchant::Billing::MalformedException, "request id must be supplied" unless options[:request_id]
+
           xml.tag! :'merchant-account-id', @options[:merchant_account_id]
           xml.tag! :'request-id', options[:request_id]
 
@@ -118,39 +127,46 @@ module ActiveMerchant
 
       # helper methods for XML-generation
       def add_parent_transaction_id xml, id
+        raise ActiveMerchant::Billing::MalformedException, "parent transaction id must be supplied" unless id
         xml.tag! :'parent-transaction-id', id
       end
 
       def add_creditor_id xml, id
+        raise ActiveMerchant::Billing::MalformedException, "creditor id must be supplied" unless id
         xml.tag! :'creditor-id', id
       end
 
-      def add_parent_transaction_id xml, id
-        xml.tag! :'parent-transaction-id', id
-      end
-
       def add_requested_amount xml, money
+        raise ActiveMerchant::Billing::MalformedException "requested amount must be supplied" unless money
         xml.tag! :'requested-amount', { :currency => "EUR" }, money
       end
 
       def add_transaction_type xml, type
+        raise ActiveMerchant::Billing::MalformedException, "transaction type must be supplied" unless type
         xml.tag! :'transaction-type', type
       end
 
       def add_payment_method xml, method
         xml.tag! :'payment-methods' do
+          raise ActiveMerchant::Billing::MalformedException, "payment method must be supplied" unless method
           xml.tag! :'payment-method', :name => method
         end
       end
 
       def add_mandate xml, options
-          xml.tag! :mandate do
-            xml.tag! :'mandate-id', options[:mandate_id]
-            xml.tag! :'signed-date', options[:signed_date]
-          end
+        raise ActiveMerchant::Billing::MalformedException, "mandate id must be supplied" unless options[:mandate_id]
+        raise ActiveMerchant::Billing::MalformedException, "signed date must be supplied" unless options[:signed_date]
+
+        xml.tag! :mandate do
+          xml.tag! :'mandate-id', options[:mandate_id]
+          xml.tag! :'signed-date', options[:signed_date]
+        end
       end
 
       def add_account_holder xml, account
+        raise ActiveMerchant::Billing::MalformedException, "first name must be supplied" unless account.first_name
+        raise ActiveMerchant::Billing::MalformedException, "last name must be supplied" unless account.last_name
+
         xml.tag! :'account-holder' do
           xml.tag! :'first-name', account.first_name
           xml.tag! :'last-name', account.last_name
@@ -158,6 +174,9 @@ module ActiveMerchant
       end
 
       def add_bank_account xml, account
+        raise ActiveMerchant::Billing::MalformedException, "iban must be supplied" unless account.iban
+        raise ActiveMerchant::Billing::MalformedException, "bic must be supplied" unless account.bic
+
         xml.tag! :'bank-account' do
           xml.tag! :iban, account.iban
           xml.tag! :bic, account.bic

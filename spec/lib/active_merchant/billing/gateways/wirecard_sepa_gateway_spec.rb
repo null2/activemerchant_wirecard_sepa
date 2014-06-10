@@ -32,6 +32,10 @@ describe ActiveMerchant::Billing::WirecardSepaGateway do
     end
 
     it "should produce valid XML for a pending debit request" do
+      @options.update :mandate_id => "the-mandate-id",
+        :signed_date => Time.now,
+        :creditor_id => "I-Am-Creditoor"
+
       request = Nokogiri::XML(@gateway.build_request :debit, 100.0, @options)
       @schema.validate(request).should be_empty
     end
@@ -42,6 +46,7 @@ describe ActiveMerchant::Billing::WirecardSepaGateway do
     end
 
     it "should produce valid XML for a void pending-debit request" do
+      @options.update :parent_transaction_id => "1234567890"
       request = Nokogiri::XML(@gateway.build_request :void_debit, 100.0, @options)
 
       @schema.validate(request).each do |error|
@@ -52,6 +57,7 @@ describe ActiveMerchant::Billing::WirecardSepaGateway do
     end
 
     it "should produce valid XML for a void-pending-credit request" do
+      @options.update :parent_transaction_id => "1234567890"
       request = Nokogiri::XML(@gateway.build_request :void_credit, 100.0, @options)
 
       @schema.validate(request).each do |error|
@@ -133,8 +139,8 @@ describe ActiveMerchant::Billing::WirecardSepaGateway do
     it "should receive a failure-response for a debit request with missing account holder info" do
       
       # invalidate request
-      @options[:sepa_account].first_name = nil
-      @options[:sepa_account].last_name = nil
+      @options[:sepa_account].first_name = ""
+      @options[:sepa_account].last_name = ""
 
       # send request and catch response
       request = @gateway.build_request :debit, 100.0, @options
@@ -195,7 +201,7 @@ describe ActiveMerchant::Billing::WirecardSepaGateway do
     it "should receive the failure-response for a credit request with missing IBAN" do
 
       # invalidate request
-      @options[:sepa_account].iban = nil
+      @options[:sepa_account].iban = ""
 
       # send request and catch response
       request = @gateway.build_request :credit, 100.0, @options
@@ -302,6 +308,121 @@ describe ActiveMerchant::Billing::WirecardSepaGateway do
         :creditor_id => "CharlieAndTheChocolateFactorial"
 
       response.success?.should be_true
+    end
+  end
+
+  describe "exception handling" do
+
+    before :each do
+      @gateway = ActiveMerchant::Billing::WirecardSepaGateway.new @gateway_options
+
+      @account = ActiveMerchant::Billing::SepaAccount.new
+      @account.first_name = "hasf"
+      @account.last_name = "slkdjfdsk"
+      @account.iban = "GR1601101250000000012300695"
+      @account.bic = "PBNKDEFF"
+
+      @options = { 
+        :sepa_account => @account, 
+        :test => true, 
+        :request_id => Digest::SHA1.hexdigest(Time.now.to_s),
+        :mandate_id => "The-Mandate",
+        :signed_date => Date.today,
+        :creditor_id => "I-Am-Creditoor"
+      }
+
+      @headers = { 'Content-Type' => 'text/xml',
+                  'Authorization' => @gateway.encoded_credentials }
+    end
+
+    it "should report an invalid action specification" do
+      expect { 
+        @gateway.build_request(100.0, @options)
+        }.to raise_error(ActiveMerchant::Billing::MalformedException, "action specification is invalid")
+    end
+
+    it "should report a missing parent transaction id" do
+      expect { 
+        @gateway.build_request(:void_debit, 100.0, @options)
+        }.to raise_error(ActiveMerchant::Billing::MalformedException, "parent transaction id must be supplied")
+    end
+
+    it "should report a missing merchant account id" do
+      gateway_options = {
+        :login => ActiveMerchant::Billing::WirecardSepaGateway::TEST_LOGIN,
+        :password => ActiveMerchant::Billing::WirecardSepaGateway::TEST_PASSWORD,
+        :merchant_account_id => nil,
+        :merchant_account_name => ActiveMerchant::Billing::WirecardSepaGateway::TEST_MERCHANT_ACCOUNT_NAME,
+        :test => true
+      }
+      test_url = ActiveMerchant::Billing::WirecardSepaGateway::TEST_URL
+      gateway = ActiveMerchant::Billing::WirecardSepaGateway.new gateway_options
+      
+      expect { 
+        gateway.build_request(:debit, 100.0, @options)
+        }.to raise_error(ActiveMerchant::Billing::MalformedException, "merchant account id must be supplied")
+    end
+
+    it "should report a missing requested amount" do
+      expect { 
+        @gateway.build_request(:debit, @options)
+        }.to raise_error(ActiveMerchant::Billing::MalformedException, "requested amount specification is invalid")
+    end
+
+    it "should report a missing mandate id"  do
+      @options.update :mandate_id => nil
+      expect { 
+        @gateway.build_request(:debit, 100.0, @options)
+        }.to raise_error(ActiveMerchant::Billing::MalformedException, "mandate id must be supplied")
+    end
+
+    it "should report a missing signed date"  do
+      @options.update :signed_date => nil
+      expect { 
+        @gateway.build_request(:debit, 100.0, @options)
+        }.to raise_error(ActiveMerchant::Billing::MalformedException, "signed date must be supplied")
+    end
+
+    it "should report a missing request id" do
+      @options.update :request_id => nil
+      expect { 
+        @gateway.build_request(:debit, 100.0, @options)
+        }.to raise_error(ActiveMerchant::Billing::MalformedException, "request id must be supplied")
+    end
+
+    it "should report a missing creditor id" do
+      @options.update :creditor_id => nil
+      expect { 
+        @gateway.build_request(:debit, 100.0, @options)
+        }.to raise_error(ActiveMerchant::Billing::MalformedException, "creditor id must be supplied")
+    end
+
+    it "should report a missing first name" do
+      @account.first_name = nil
+      expect { 
+        @gateway.build_request(:debit, 100.2, @options)
+        }.to raise_error(ActiveMerchant::Billing::MalformedException, "first name must be supplied")
+    end
+
+    it "should report a missing last name" do
+      @account.last_name = nil
+      expect { 
+        @gateway.build_request(:debit, 100.2, @options)
+        }.to raise_error(ActiveMerchant::Billing::MalformedException, "last name must be supplied")
+    end
+
+    it "should report a missing iban" do
+      @account.iban = nil
+      expect { 
+        @gateway.build_request(:debit, 100.2, @options)
+        }.to raise_error(ActiveMerchant::Billing::MalformedException, "iban must be supplied")
+    end
+
+    it "should report a missing bic" do
+      @account.bic = nil
+      expect { 
+        @gateway.build_request(:debit, 100.2, @options)
+        }.to raise_error(ActiveMerchant::Billing::MalformedException, "bic must be supplied")
     end
   end
 end

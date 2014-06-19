@@ -204,7 +204,7 @@ module ActiveMerchant
           response[:Code] = status.attributes["code"]
           response[:Description] = status.attributes["description"]
           response[:Severity] = status.attributes["severity"]
-          response[:GuWID] = transaction_id.text if transaction_id
+          response[:TransactionId] = transaction_id.text if transaction_id
           response[:RequestId] = request_id.text if request_id
 
         else
@@ -235,7 +235,7 @@ module ActiveMerchant
         # parse the reply into a Response object
         success = response[:TransactionState] == 'success'
         message = response[:Description]
-        authorization = (success && @options[:action] == :authorization) ? response[:GuWID] : nil
+        authorization = (success && @options[:action] == :authorization) ? response[:TransactionId] : nil
 
         Response.new(success, message, response,
           :test => test?,

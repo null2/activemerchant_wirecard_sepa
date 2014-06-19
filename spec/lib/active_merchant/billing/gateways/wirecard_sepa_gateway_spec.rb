@@ -40,7 +40,6 @@ describe ActiveMerchant::Billing::WirecardSepaGateway do
         :creditor_id => "I-Am-Creditoor"
 
       request = Nokogiri::XML(@gateway.build_request :debit, @money1, @options)
-      puts request
       @schema.validate(request).should be_empty
     end
 
@@ -53,20 +52,12 @@ describe ActiveMerchant::Billing::WirecardSepaGateway do
       @options.update :parent_transaction_id => "1234567890"
       request = Nokogiri::XML(@gateway.build_request :void_debit, @money2, @options)
 
-      @schema.validate(request).each do |error|
-        puts error.message
-      end  
-
       @schema.validate(request).should be_empty
     end
 
     it "should produce valid XML for a void-pending-credit request" do
       @options.update :parent_transaction_id => "1234567890"
       request = Nokogiri::XML(@gateway.build_request :void_credit, @money1, @options)
-
-      @schema.validate(request).each do |error|
-        puts error.message
-      end
 
       @schema.validate(request).should be_empty
     end
@@ -135,7 +126,7 @@ describe ActiveMerchant::Billing::WirecardSepaGateway do
       response[:Code].should match /^201.0000$/
       response[:Description].should match /^The resource was successfully created.$/
       response[:Severity].should match /^information$/
-      response[:GuWID].should_not be_nil
+      response[:TransactionId].should_not be_nil
       response[:RequestId].should_not be_nil
     end
 

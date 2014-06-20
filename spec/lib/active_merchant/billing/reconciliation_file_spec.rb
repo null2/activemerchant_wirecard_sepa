@@ -53,6 +53,10 @@ describe ActiveMerchant::Billing::ReconciliationFile do
     it "should parse NULL values as nil values" do
       @recon.rows.first[:exchange_rate].should be_nil
     end
+
+    it "should have no header row" do
+      @recon.rows.size.should be 2
+    end
   end
 
 end

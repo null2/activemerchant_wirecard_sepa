@@ -42,20 +42,20 @@ describe ActiveMerchant::Billing::ReconciliationFile do
     end
  
     it "should parse the body into an array of hashes" do
-      @recon.rows.should be_a Array
-      @recon.rows.first.should be_a Hash
+      @recon.transactions.should be_a Array
+      @recon.transactions.first.should be_a Hash
     end
 
     it "should parse the csv headers into lower-case, underscore-separated symbols" do
-      @recon.rows.first[:merchant_account_name].should == "smart tickets gmbh"
+      @recon.transactions.first[:merchant_account_name].should == "smart tickets gmbh"
     end
 
     it "should parse NULL values as nil values" do
-      @recon.rows.first[:exchange_rate].should be_nil
+      @recon.transactions.first[:exchange_rate].should be_nil
     end
 
     it "should have no header row" do
-      @recon.rows.size.should be 2
+      @recon.transactions.size.should be 2
     end
   end
 

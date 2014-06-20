@@ -8,7 +8,7 @@ module ActiveMerchant
         :processing_gateway, 
         :processing_date, 
         :internal_ip, 
-        :rows
+        :transactions
 
       CSV::Converters[:null_to_nil] = lambda do |field|
         field == "NULL" ? nil : field
@@ -25,7 +25,7 @@ module ActiveMerchant
         @internal_ip         = ip
         @processing_date     = Date.parse(date)
         @merchant_account_id = id
-        @rows                = parse body
+        @transactions        = parse body
       end
 
       private 

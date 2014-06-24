@@ -27,7 +27,7 @@ module ActiveMerchant
 
       def disconnect!
         return unless @client 
-        @client.close! 
+        @client.close_channel
         @client = nil
       end
 

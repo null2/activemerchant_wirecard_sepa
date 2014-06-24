@@ -22,8 +22,10 @@ Gem::Specification.new do |spec|
   spec.add_development_dependency "rake"
   spec.add_development_dependency "rspec"
   spec.add_development_dependency "nokogiri"
+  spec.add_development_dependency "pry"
 
   spec.add_dependency "rails-i18n"
+  spec.add_dependency "net-sftp"
   spec.add_dependency "activesupport"
   spec.add_dependency "activemerchant"
 end

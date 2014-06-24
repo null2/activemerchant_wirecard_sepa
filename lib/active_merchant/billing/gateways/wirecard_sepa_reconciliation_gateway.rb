@@ -37,9 +37,9 @@ module ActiveMerchant
         connect! unless @client
 
         files = @client.dir.glob("to#{@user}/new", "EngineAPTransactions_*.csv").map do |entry|
-          filename = "to#{@user}/new/#{entry.name}"
+          filepath = "to#{@user}/new/#{entry.name}"
 
-          ActiveMerchant::Billing::ReconciliationFile.new(filename, @client.download!(filename))
+          ActiveMerchant::Billing::ReconciliationFile.new(entry.name, @client.download!(filepath))
         end
 
         disconnect!

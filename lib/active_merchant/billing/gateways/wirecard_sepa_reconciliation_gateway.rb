@@ -2,6 +2,7 @@ module ActiveMerchant
   module Billing
     class WirecardSepaReconciliationGateway < Gateway
       require 'net/sftp'
+      require 'tempfile'
 
       attr_reader :client
 
@@ -67,7 +68,7 @@ module ActiveMerchant
       def move_file filename
         source, target = "to#{@user}/new/#{filename}", "to#{@user}/processed/#{filename}"
 
-        tmp = TempFile.new(filename)
+        tmp = Tempfile.new(filename)
 
         begin 
           @client.download!(source, tmp)

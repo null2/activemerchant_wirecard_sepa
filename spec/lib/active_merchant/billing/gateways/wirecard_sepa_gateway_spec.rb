@@ -89,7 +89,7 @@ describe ActiveMerchant::Billing::WirecardSepaGateway do
       }
 
       @headers = { 'Content-Type' => 'text/xml',
-                    'Authorization' => @gateway.encoded_credentials }
+                   'Authorization' => @gateway.encoded_credentials }
 
     end
 
@@ -334,12 +334,6 @@ describe ActiveMerchant::Billing::WirecardSepaGateway do
       expect { 
         @gateway.build_request(@money1, @options)
         }.to raise_error(ActiveMerchant::Billing::MalformedException, "action specification is invalid")
-    end
-
-    it "should report a missing parent transaction id" do
-      expect { 
-        @gateway.build_request(:void_debit, @money2, @options)
-        }.to raise_error(ActiveMerchant::Billing::MalformedException, "parent transaction id must be supplied")
     end
 
     it "should report a missing merchant account id" do

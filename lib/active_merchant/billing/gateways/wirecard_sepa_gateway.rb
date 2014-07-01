@@ -101,6 +101,7 @@ module ActiveMerchant
         when :credit
           apply_properties xml, :transaction_type => 'pending-credit',
             :requested_amount => money,
+            :parent_transaction_id  => options[:parent_transaction_id],
             :account_holder => options[:sepa_account],
             :payment_method => "sepacredit",
             :bank_account => options[:sepa_account]
@@ -128,8 +129,7 @@ module ActiveMerchant
 
       # helper methods for XML-generation
       def add_parent_transaction_id xml, id
-        raise ActiveMerchant::Billing::MalformedException, "parent transaction id must be supplied" unless id
-        xml.tag! :'parent-transaction-id', id
+        xml.tag!(:'parent-transaction-id', id) if id
       end
 
       def add_creditor_id xml, id

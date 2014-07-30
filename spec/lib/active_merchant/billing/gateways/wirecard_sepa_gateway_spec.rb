@@ -67,6 +67,13 @@ describe ActiveMerchant::Billing::WirecardSepaGateway do
 
       @schema.validate(request).should be_empty
     end
+
+    it "should validate XML with ip address and user email" do
+      @options.update :ip_address => "192.168.0.0", :email => "user@test.ir"
+
+      request = Nokogiri::XML(@gateway.build_request :authorize, @money2, @options)
+      @schema.validate(request).should be_empty
+    end
   end
 
   describe "XML integration test" do
@@ -85,7 +92,7 @@ describe ActiveMerchant::Billing::WirecardSepaGateway do
         :request_id => Digest::SHA1.hexdigest(Time.now.to_s),
         :mandate_id => "The-Mandate",
         :signed_date => Date.today,
-        :creditor_id => "I-Am-Creditoor"
+        :creditor_id => "DE98ZZZ09999999999"
       }
 
       @headers = { 'Content-Type' => 'text/xml',
@@ -118,10 +125,13 @@ describe ActiveMerchant::Billing::WirecardSepaGateway do
     # debit (success)
     it "should receive the success-response for a correct debit request" do
       # send request and catch response
+      @options.update :request_id => rand(9999999999999999999)
       request = @gateway.build_request :debit, @money1, @options
       response = @gateway.parse(@gateway.ssl_post(@test_url, request, @headers))
 
       # check response
+
+
       response[:TransactionState].should match /^success$/
       response[:Code].should match /^201.0000$/
       response[:Description].should match /^The resource was successfully created.$/
@@ -182,6 +192,7 @@ describe ActiveMerchant::Billing::WirecardSepaGateway do
     it "should receive the success-response for a correct credit request" do
       
       # send valid request and catch response
+      @options.update :request_id => rand(999999999999)
       request = @gateway.build_request :credit, @money1, @options
       response = @gateway.parse(@gateway.ssl_post(@test_url, request, @headers))
 
@@ -219,7 +230,7 @@ describe ActiveMerchant::Billing::WirecardSepaGateway do
       parent_id = REXML::XPath.first(xml, "//transaction-id").text
 
       @options.update :parent_transaction_id => parent_id, 
-        :request_id => Digest::SHA1.hexdigest(Time.now.to_s)
+        :request_id => Digest::SHA1.hexdigest(rand(99999999999999).to_s)
 
       # insert current parent-transaction-id
       request = @gateway.build_request :void_debit, @money1, @options
@@ -239,7 +250,9 @@ describe ActiveMerchant::Billing::WirecardSepaGateway do
     it "should receive the failure-response for a void-debit request without parent-transaction-id" do
       
       # invalidate request
-      @options.update :parent_transaction_id => ''
+      @options.update :parent_transaction_id => '',
+        :request_id => Digest::SHA1.hexdigest(rand(9999999999999).to_s)
+
       request = @gateway.build_request :void_debit, @money2, @options
       request.gsub!(%r{\n  <parent-transaction-id>.*</parent-transaction-id>}, '')
       
@@ -263,7 +276,7 @@ describe ActiveMerchant::Billing::WirecardSepaGateway do
       parent_id = REXML::XPath.first(xml, "//transaction-id").text
 
       @options.update :parent_transaction_id => parent_id,
-        :request_id => Digest::SHA1.hexdigest(Time.now.to_s)
+        :request_id => Digest::SHA1.hexdigest(rand(9999999999999).to_s)
 
       # insert current parent-transaction-id
       request = @gateway.build_request :void_credit, @money2, @options
@@ -283,7 +296,9 @@ describe ActiveMerchant::Billing::WirecardSepaGateway do
     it "should receive the failure-response for a void-credit request with missing parent-transaction-id" do
 
       # invalidate request
-      @options.update :parent_transaction_id => ""
+      @options.update :parent_transaction_id => "",
+        :request_id => Digest::SHA1.hexdigest(rand(9999999999999).to_s)
+        
       request = @gateway.build_request :void_credit, @money1, @options
       request.gsub!(%r{\n  <parent-transaction-id>.*</parent-transaction-id>}, '')
       response = @gateway.parse(@gateway.ssl_post(@test_url, request, @headers))
@@ -297,10 +312,12 @@ describe ActiveMerchant::Billing::WirecardSepaGateway do
 
     # Response object
     it "should return a valid Response object for a valid request" do
-      response = @gateway.debit @money1, @account, :request_id => Digest::SHA1.hexdigest(Time.now.to_s), 
+
+      response = @gateway.debit @money1, @account, :request_id => Digest::SHA1.hexdigest(rand(99999999999).to_s), 
         :mandate_id => "hoolahoop",
         :signed_date => Date.today,
-        :creditor_id => "CharlieAndTheChocolateFactorial"
+        :creditor_id => "DE98ZZZ09999999999"
+
 
       response.success?.should be_true
     end
@@ -323,7 +340,7 @@ describe ActiveMerchant::Billing::WirecardSepaGateway do
         :request_id => Digest::SHA1.hexdigest(Time.now.to_s),
         :mandate_id => "The-Mandate",
         :signed_date => Date.today,
-        :creditor_id => "I-Am-Creditoor"
+        :creditor_id => "DE98ZZZ09999999999"
       }
 
       @headers = { 'Content-Type' => 'text/xml',

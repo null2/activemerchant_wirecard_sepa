@@ -43,4 +43,14 @@ describe ActiveMerchant::Billing::SepaAccount do
   	@account.last_name = nil
   	@account.valid?.should be_false    
   end
+
+  it 'should reject an email with invalid format' do
+    @account.email = "Falschmail"
+    @account.valid?.should be_false
+  end
+
+  it 'should accept an email with valid format' do
+    @account.email = "User-123@test.mail"
+    @account.valid?.should be_true
+  end
 end

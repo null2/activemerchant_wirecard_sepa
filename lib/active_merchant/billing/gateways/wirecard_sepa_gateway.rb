@@ -84,46 +84,48 @@ module ActiveMerchant
       # Builder::XmlMarkup, Symbol, String, {} -> Builder::XmlMarkup
       #
       # ASSUMES: options contains information about creditor-id and signed-date,
-      #          parent-transaction-id
-      def add_transaction_data(xml, action, money, options={})
+      #          parent-transaction-id, ip-address (optional)
+      def add_transaction_data xml, action, money, options={}
         # add_requested_amount xml, money, options[:currency]
 
         case action
         when :debit
           apply_properties xml, :transaction_type => 'pending-debit',
             :requested_amount => money,
-            :account_holder => options[:sepa_account],
-            :payment_method => "sepadirectdebit", 
-            :bank_account => options[:sepa_account],
-            :mandate => options,
-            :creditor_id => options[:creditor_id]
+            :account_holder   => options[:sepa_account],
+            :ip_address       => options[:ip_address],
+            :payment_method   => "sepadirectdebit", 
+            :bank_account     => options[:sepa_account],
+            :mandate          => options,
+            :creditor_id      => options[:creditor_id]
 
         when :credit
           apply_properties xml, :transaction_type => 'pending-credit',
-            :requested_amount => money,
-            :parent_transaction_id  => options[:parent_transaction_id],
-            :account_holder => options[:sepa_account],
-            :payment_method => "sepacredit",
-            :bank_account => options[:sepa_account]
+            :requested_amount      => money,
+            :parent_transaction_id => options[:parent_transaction_id],
+            :account_holder        => options[:sepa_account],
+            :ip_address            => options[:ip_address],
+            :payment_method        => "sepacredit",
+            :bank_account          => options[:sepa_account]
 
         when :void_debit
           apply_properties xml, :transaction_type => 'void-debit',
-            :requested_amount => money,
-            :parent_transaction_id  => options[:parent_transaction_id],
-            :payment_method => "sepadirectdebit"
+            :requested_amount      => money,
+            :parent_transaction_id => options[:parent_transaction_id],
+            :payment_method        => "sepadirectdebit"
         
         when :void_credit
           apply_properties xml, :transaction_type => 'void-credit',
-            :requested_amount => money,
-            :parent_transaction_id  => options[:parent_transaction_id],
-            :payment_method => 'sepacredit'
+            :requested_amount      => money,
+            :parent_transaction_id => options[:parent_transaction_id],
+            :payment_method        => 'sepacredit'
 
         when :authorize
            apply_properties xml, :transaction_type => 'authorization',
              :requested_amount => money,
-             :account_holder => options[:sepa_account],
-             :payment_method => 'sepadirectdebit',
-             :bank_account => options[:sepa_account]
+             :account_holder   => options[:sepa_account],
+             :payment_method   => 'sepadirectdebit',
+             :bank_account     => options[:sepa_account]
         end
       end
 
@@ -171,6 +173,7 @@ module ActiveMerchant
         xml.tag! :'account-holder' do
           xml.tag! :'first-name', account.first_name
           xml.tag! :'last-name', account.last_name
+          (xml.tag! :email, account.email) if account.email
         end
       end
 
@@ -182,6 +185,14 @@ module ActiveMerchant
           xml.tag! :iban, account.iban
           xml.tag! :bic, account.bic
         end
+      end
+      
+      def add_ip_address xml, ip
+        if ip and ip !~ /^\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3}$/
+          raise ActiveMerchant::Billing::MalformedException, "provided ip-address is invalid"
+        end
+
+        (xml.tag! :'ip-address', ip) if ip
       end
 
       # Read XML message from the gateway if successful and extract required return values

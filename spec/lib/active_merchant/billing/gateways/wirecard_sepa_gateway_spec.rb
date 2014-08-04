@@ -95,8 +95,10 @@ describe ActiveMerchant::Billing::WirecardSepaGateway do
         :creditor_id => "DE98ZZZ09999999999"
       }
 
-      @headers = { 'Content-Type' => 'text/xml',
-                   'Authorization' => @gateway.encoded_credentials }
+      @headers = { 
+        'Content-Type' => 'text/xml',
+        'Authorization' => @gateway.encoded_credentials 
+      }
 
     end
 
@@ -318,7 +320,6 @@ describe ActiveMerchant::Billing::WirecardSepaGateway do
         :signed_date => Date.today,
         :creditor_id => "DE98ZZZ09999999999"
 
-
       response.success?.should be_true
     end
   end
@@ -330,21 +331,23 @@ describe ActiveMerchant::Billing::WirecardSepaGateway do
 
       @account = ActiveMerchant::Billing::SepaAccount.new
       @account.first_name = "hasf"
-      @account.last_name = "slkdjfdsk"
-      @account.iban = "GR1601101250000000012300695"
-      @account.bic = "PBNKDEFF"
+      @account.last_name  = "slkdjfdsk"
+      @account.iban       = "GR1601101250000000012300695"
+      @account.bic        = "PBNKDEFF"
 
       @options = { 
         :sepa_account => @account, 
-        :test => true, 
-        :request_id => Digest::SHA1.hexdigest(Time.now.to_s),
-        :mandate_id => "The-Mandate",
-        :signed_date => Date.today,
-        :creditor_id => "DE98ZZZ09999999999"
+        :test         => true, 
+        :request_id   => Digest::SHA1.hexdigest(Time.now.to_s),
+        :mandate_id   => "The-Mandate",
+        :signed_date  => Date.today,
+        :creditor_id  => "DE98ZZZ09999999999"
       }
 
-      @headers = { 'Content-Type' => 'text/xml',
-                  'Authorization' => @gateway.encoded_credentials }
+      @headers = { 
+        'Content-Type'  => 'text/xml',
+        'Authorization' => @gateway.encoded_credentials 
+      }
     end
 
     it "should report an invalid action specification" do
@@ -355,12 +358,13 @@ describe ActiveMerchant::Billing::WirecardSepaGateway do
 
     it "should report a missing merchant account id" do
       gateway_options = {
-        :login => ActiveMerchant::Billing::WirecardSepaGateway::TEST_LOGIN,
-        :password => ActiveMerchant::Billing::WirecardSepaGateway::TEST_PASSWORD,
-        :merchant_account_id => nil,
+        :login                 => ActiveMerchant::Billing::WirecardSepaGateway::TEST_LOGIN,
+        :password              => ActiveMerchant::Billing::WirecardSepaGateway::TEST_PASSWORD,
+        :merchant_account_id   => nil,
         :merchant_account_name => ActiveMerchant::Billing::WirecardSepaGateway::TEST_MERCHANT_ACCOUNT_NAME,
-        :test => true
+        :test                  => true
       }
+
       test_url = ActiveMerchant::Billing::WirecardSepaGateway::TEST_URL
       gateway = ActiveMerchant::Billing::WirecardSepaGateway.new gateway_options
       
@@ -429,6 +433,13 @@ describe ActiveMerchant::Billing::WirecardSepaGateway do
       expect { 
         @gateway.build_request(:debit, @money1, @options)
         }.to raise_error(ActiveMerchant::Billing::MalformedException, "bic must be supplied")
+    end
+
+    it "should report a malformed ip-address" do
+      @options.update :ip_address => "abc"
+      expect { 
+        @gateway.build_request(:debit, @money1, @options)
+        }.to raise_error(ActiveMerchant::Billing::MalformedException, "provided ip-address is invalid")
     end
   end
 end

@@ -19,20 +19,22 @@ describe ActiveMerchant::Billing::WirecardSepaGateway do
 
   describe "XML validation" do
     before :each do
-      @schema = Nokogiri::XML::Schema(File.read(PROJECT_ROOT + "/validation/payment.xsd"))
+      @schema  = Nokogiri::XML::Schema(File.read(PROJECT_ROOT + "/validation/payment.xsd"))
 
       @gateway = ActiveMerchant::Billing::WirecardSepaGateway.new @gateway_options
 
       @account = ActiveMerchant::Billing::SepaAccount.new
       @account.first_name = "Vorname"
-      @account.last_name = "Nachname"
-      @account.iban = "GR1601101250000000012300695"
-      @account.bic = "PBNKDEFF"
+      @account.last_name  = "Nachname"
+      @account.iban       = "GR1601101250000000012300695"
+      @account.bic        = "PBNKDEFF"
 
-      @options = { :sepa_account => @account,
-                   :request_id => Digest::SHA1.hexdigest(Time.now.to_s)
-                 }
+      @options = { 
+        :sepa_account => @account,
+        :request_id   => Digest::SHA1.hexdigest(Time.now.to_s)
+      }
     end
+
 
     it "should produce valid XML for a pending debit request" do
       @options.update :mandate_id => "the-mandate-id",
@@ -123,6 +125,28 @@ describe ActiveMerchant::Billing::WirecardSepaGateway do
       parsed_response = @gateway.parse(no_reply_xml)
       parsed_response[:Message].should match "No valid XML response message received. \nPropably wrong credentials supplied with HTTP header."
     end
+
+
+    # optional argments test
+    it "should create a successful request with optional arguments" do
+      @account.email               = "user@test.de"
+      @account.address_city        = "Werkstadt"
+      @account.address_country     = "HK"
+      @account.address_postal_code = "12358"
+      @account.address_state       = "state of mind"
+      @account.address_street1     = "Kaputte Strasse 15"
+
+      @options.update :request_id => rand(9999999999999999999)
+      request = @gateway.build_request :debit, @money1, @options
+
+      puts request
+
+      response = @gateway.parse(@gateway.ssl_post(@test_url, request, @headers))
+
+      response[:TransactionState].should match /^success$/
+    end
+
+
 
     # debit (success)
     it "should receive the success-response for a correct debit request" do

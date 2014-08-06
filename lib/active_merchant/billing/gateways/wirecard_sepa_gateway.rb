@@ -174,6 +174,16 @@ module ActiveMerchant
           xml.tag! :'first-name', account.first_name
           xml.tag! :'last-name', account.last_name
           (xml.tag! :email, account.email) if account.email
+          if account.has_address_info
+              xml.tag! :address do
+                (xml.tag! :city, account.address_city)                 if account.address_city
+                (xml.tag! :country, account.address_country)           if account.address_country
+                (xml.tag! :'postal-code', account.address_postal_code) if account.address_postal_code
+                (xml.tag! :state, account.address_state)               if account.address_state
+                (xml.tag! :street1, account.address_street1)           if account.address_street1
+                (xml.tag! :street2, account.address_street2)           if account.address_street2
+             end
+          end
         end
       end
 

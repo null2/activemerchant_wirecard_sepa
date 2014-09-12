@@ -18,7 +18,7 @@ module ActiveMerchant
       TEST_URL = 'https://api-test.wirecard.com/engine/rest/paymentmethods/'
      
       # Live server location
-      LIVE_URL = 'https://c3.wirecard.com/secure/ssl-gateway'
+      LIVE_URL = 'https://api.wirecard.com/engine/rest/paymentmethods/'
 
       TEST_MERCHANT_ACCOUNT_ID = "4c901196-eff7-411e-82a3-5ef6b6860d64"
       TEST_MERCHANT_ACCOUNT_NAME = "WD SEPA Test"

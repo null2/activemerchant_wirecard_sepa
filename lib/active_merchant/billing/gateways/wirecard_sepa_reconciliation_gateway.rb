@@ -68,7 +68,7 @@ module ActiveMerchant
       def move_file filename
         source, target = "to#{@user}/new/#{filename}", "to#{@user}/processed/#{filename}"
 
-        tmp = Tempfile.new(filename)
+        tmp = Tempfile.new(filename, :encoding => 'ASCII-8BIT')
 
         begin 
           @client.download!(source, tmp)
